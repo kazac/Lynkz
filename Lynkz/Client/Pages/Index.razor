@@ -1,0 +1,151 @@
+﻿@page "/"
+@using Lynkz.Shared
+@using Blazor.Extensions;
+@using Blazor.Extensions.Canvas
+@using Blazor.Extensions.Canvas.Canvas2D;
+@inject HttpClient Http
+@inject IJSRuntime JsRuntime
+
+<PageTitle>Draw Shapes</PageTitle>
+<p>Enter a prompt:</p>
+<EditForm Model="@shape" OnValidSubmit="@HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <InputText id="request" @bind-Value="shape.Request" style="width:30em;" />
+
+    <button type="submit">Submit</button>
+</EditForm>
+<p></p>
+<p>Canvas</p>
+<div style="display:inline-block; border:solid; border-width:1px">
+    <BECanvas Width="600" Height="600" @ref="_canvasReference"></BECanvas>
+</div>
+<p></p>
+<p>Examples:</p>
+<pre>
+    Draw a circle with a radius of 100
+    Draw a square with a side length of 200
+    Draw a rectangle with a width of 250 and a height of 400
+    Draw an octagon with a side length of 200
+    Draw an isosceles triangle with a height of 200 and a width of 100
+</pre>
+
+@code {
+    private Canvas2DContext _context;
+
+    protected BECanvasComponent _canvasReference;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            this._context = await this._canvasReference.CreateCanvas2DAsync();
+        }
+
+        //if ((from n in shape.Nums where n > 500 || n < 10 select n).Any())
+        //{
+        //    throw new ApplicationException("bad num");
+        //}
+        await _context.ClearRectAsync(0, 0, 1000, 1000);
+        switch (shape.Type)
+        {
+            case "square":
+                {
+                    var side = shape.Nums![0];
+                    await _context.BeginBatchAsync();
+                    await _context.SetLineWidthAsync(2);
+                    await _context.ClearRectAsync(0, 0, 1000, 1000);
+                    await _context.BeginPathAsync();
+                    await _context.MoveToAsync(50, 50);
+                    await _context.LineToAsync(50 + side, 50);
+                    await _context.LineToAsync(50 + side, 50 + side);
+                    await _context.LineToAsync(50, 50 + side);
+                    await _context.LineToAsync(50, 50);
+                    await _context.StrokeAsync();
+                    await _context.EndBatchAsync();
+                    break;
+                }
+            case "rectangle":
+                {
+                    var (width, height) = shape.Dims![0] == "width" ? (shape.Nums![0], shape.Nums[1]) : (shape.Nums![1], shape.Nums[0]);
+                    await _context.BeginBatchAsync();
+                    await _context.SetLineWidthAsync(2);
+                    await _context.ClearRectAsync(0, 0, 1000, 1000);
+                    await _context.BeginPathAsync();
+                    await _context.MoveToAsync(50, 50);
+                    await _context.LineToAsync(50 + width, 50);
+                    await _context.LineToAsync(50 + width, 50 + height);
+                    await _context.LineToAsync(50, 50 + height);
+                    await _context.LineToAsync(50, 50);
+                    await _context.StrokeAsync();
+                    await _context.EndBatchAsync();
+                    break;
+                }
+            case "isosceles-triangle":
+                {
+                    var (width, height) = shape.Dims![0] == "width" ? (shape.Nums![0], shape.Nums[1]) : (shape.Nums![1], shape.Nums[0]);
+                    await _context.BeginBatchAsync();
+                    await _context.SetLineWidthAsync(2);
+                    await _context.ClearRectAsync(0, 0, 1000, 1000);
+                    await _context.BeginPathAsync();
+                    await _context.MoveToAsync(300, 50);
+                    await _context.LineToAsync(300 + width/2, 50+height);
+                    await _context.LineToAsync(300 - width/2, 50 + height);
+                    await _context.LineToAsync(300, 50);
+                    await _context.StrokeAsync();
+                    await _context.EndBatchAsync();
+                    break;
+                }
+            case "octagon":
+                {
+                    var x0 = 300;
+                    var y0 = 50;
+                    var side = (float) shape.Nums![0];
+                    await _context.BeginBatchAsync();
+                    await _context.SetLineWidthAsync(2);
+                    await _context.ClearRectAsync(0, 0, 1000, 1000);
+                    await _context.BeginPathAsync();
+                    await _context.MoveToAsync(x0-(side/2.0), y0);
+                    await _context.LineToAsync(x0 + side/2.0, y0);
+                    await _context.LineToAsync(x0 + side/2.0 + Math.Sqrt(2.0)*(side/2.0), y0 + Math.Sqrt(2.0)*(side/2.0));
+                    await _context.LineToAsync(x0 + side / 2.0 + Math.Sqrt(2.0) * (side / 2.0), y0 + Math.Sqrt(2.0) * (side / 2.0) + side);
+                    await _context.LineToAsync(x0 + side / 2.0, y0 + Math.Sqrt(2.0) * (side) + side);
+                    await _context.LineToAsync(x0 - (side / 2.0), y0 + Math.Sqrt(2.0) * (side) + side);
+                    await _context.LineToAsync(x0 - (side / 2.0 + Math.Sqrt(2.0) * (side / 2.0)), y0 + Math.Sqrt(2.0) * (side / 2.0) + side);
+                    await _context.LineToAsync(x0 - (side / 2.0 + Math.Sqrt(2.0) * (side / 2.0)), y0 + Math.Sqrt(2.0) * (side / 2.0));
+                    await _context.LineToAsync(x0 - (side / 2.0), y0);
+                    await _context.StrokeAsync();
+                    await _context.EndBatchAsync();
+                    break;
+                }
+            case "circle":
+                var radius = shape.Nums![0];
+                var centerX = 200;
+                var centerY = 200;
+                await _context.BeginBatchAsync();
+                await _context.SetLineWidthAsync(2);
+                await _context.ClearRectAsync(0, 0, 1000, 1000);
+                await _context.BeginPathAsync();
+                await _context.ArcAsync(centerX, centerY, radius, 0, 2 * Math.PI, false);
+                await _context.StrokeAsync();
+                await _context.EndBatchAsync();
+                break;
+        }
+    }
+
+    @code {
+        private Shape shape = new Shape();
+
+        private async void HandleValidSubmit()
+        {
+            //       Logger.LogInformation("HandleValidSubmit called");
+
+            shape = await Http.GetFromJsonAsync<Shape>($"Shape/{shape.Request}");
+            if (shape.Msg != null && shape.Msg != "")
+                await JsRuntime.InvokeVoidAsync("alert", shape.Msg.ToString());
+            else
+                this.StateHasChanged();
+        }
+    }
+}
